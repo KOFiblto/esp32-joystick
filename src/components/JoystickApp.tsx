@@ -99,9 +99,7 @@ const JoystickApp: React.FC = () => {
         transition={{ duration: 0.5, delay: 0.2 }}
         className="relative flex justify-center mb-12 w-full max-w-md"
       >
-        <div className="w-full flex justify-center items-center">
-          <Joystick onChange={handleJoystickChange} />
-        </div>
+        <Joystick onChange={handleJoystickChange} />
       </motion.div>
 
       <motion.div
@@ -113,13 +111,13 @@ const JoystickApp: React.FC = () => {
         <div className="flex justify-center gap-8 mb-6">
           <div className="text-center">
             <div className="text-xs font-medium uppercase text-muted-foreground mb-1">X-Axis</div>
-            <div className="font-mono font-medium text-2xl tracking-tight text-foreground">
+            <div className="font-mono font-medium text-2xl tracking-tight text-foreground text-center w-24">
               {formatCoord(x)}
             </div>
           </div>
           <div className="text-center">
             <div className="text-xs font-medium uppercase text-muted-foreground mb-1">Y-Axis</div>
-            <div className="font-mono font-medium text-2xl tracking-tight text-foreground">
+            <div className="font-mono font-medium text-2xl tracking-tight text-foreground text-center w-24">
               {formatCoord(y)}
             </div>
           </div>

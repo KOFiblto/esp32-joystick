@@ -138,7 +138,7 @@ const Joystick: React.FC<JoystickProps> = ({ onChange }) => {
   return (
     <div 
       ref={containerRef}
-      className="joystick-container relative w-full max-w-[320px] aspect-square rounded-full bg-slate-200 dark:bg-slate-800 border-4 border-slate-300 dark:border-slate-700 shadow-lg overflow-hidden cursor-grab"
+      className="joystick-container relative w-full max-w-[320px] aspect-square rounded-full bg-slate-200 dark:bg-slate-800 border-4 border-slate-300 dark:border-slate-700 shadow-lg overflow-hidden cursor-grab mx-auto"
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
@@ -149,12 +149,12 @@ const Joystick: React.FC<JoystickProps> = ({ onChange }) => {
       <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-400/30 dark:bg-slate-600/30"></div>
       <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-400/30 dark:bg-slate-600/30"></div>
       
-      <div className="joystick-base absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-12 h-12 rounded-full bg-slate-300 dark:bg-slate-700 opacity-50"></div>
       </div>
       <div
         ref={knobRef}
-        className={`joystick-knob absolute w-24 h-24 rounded-full bg-primary shadow-lg ${isDragging ? 'scale-95' : ''}`}
+        className={`absolute w-24 h-24 rounded-full bg-primary shadow-lg ${isDragging ? 'scale-95' : ''}`}
         style={{ 
           left: `${position.x}px`, 
           top: `${position.y}px`,
