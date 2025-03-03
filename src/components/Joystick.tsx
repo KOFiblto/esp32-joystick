@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from "react";
 
 interface JoystickProps {
@@ -137,18 +138,26 @@ const Joystick: React.FC<JoystickProps> = ({ onChange }) => {
   return (
     <div 
       ref={containerRef}
-      className="joystick-container"
+      className="joystick-container relative w-full max-w-[320px] aspect-square rounded-full bg-slate-200 dark:bg-slate-800 border-4 border-slate-300 dark:border-slate-700 shadow-lg overflow-hidden cursor-grab"
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
+      <div className="joystick-base absolute inset-0 flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full bg-slate-300 dark:bg-slate-700 opacity-50"></div>
+      </div>
       <div
         ref={knobRef}
-        className={`joystick-knob ${isDragging ? 'scale-95' : ''}`}
+        className={`joystick-knob absolute w-24 h-24 rounded-full bg-primary shadow-lg ${isDragging ? 'scale-95' : ''}`}
         style={{ 
           left: `${position.x}px`, 
-          top: `${position.y}px` 
+          top: `${position.y}px`,
+          transform: 'translate(-50%, -50%)'
         }}
-      />
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-primary-foreground/20"></div>
+        </div>
+      </div>
     </div>
   );
 };
