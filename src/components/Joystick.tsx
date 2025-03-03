@@ -25,6 +25,13 @@ const Joystick: React.FC<JoystickProps> = ({ onChange }) => {
     return { centerX, centerY, radius };
   }, [containerRef.current?.offsetWidth]);
 
+  // Initialize joystick to center
+  useEffect(() => {
+    if (containerRef.current && dimensions.centerX && dimensions.centerY) {
+      setPosition({ x: dimensions.centerX, y: dimensions.centerY });
+    }
+  }, [dimensions.centerX, dimensions.centerY]);
+
   // Handle mouse/touch events
   const handleStart = (clientX: number, clientY: number) => {
     if (!containerRef.current) return;
@@ -128,13 +135,6 @@ const Joystick: React.FC<JoystickProps> = ({ onChange }) => {
     };
   }, [isDragging]);
 
-  // Initialize joystick to center
-  useEffect(() => {
-    if (containerRef.current && dimensions.centerX && dimensions.centerY) {
-      setPosition({ x: dimensions.centerX, y: dimensions.centerY });
-    }
-  }, [dimensions.centerX, dimensions.centerY]);
-
   return (
     <div 
       ref={containerRef}
@@ -142,6 +142,13 @@ const Joystick: React.FC<JoystickProps> = ({ onChange }) => {
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
     >
+      {/* Center marker */}
+      <div className="absolute left-1/2 top-1/2 w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-600 -translate-x-1/2 -translate-y-1/2 z-10"></div>
+      
+      {/* Crosshair guides */}
+      <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-400/30 dark:bg-slate-600/30"></div>
+      <div className="absolute top-0 bottom-0 left-1/2 w-px bg-slate-400/30 dark:bg-slate-600/30"></div>
+      
       <div className="joystick-base absolute inset-0 flex items-center justify-center">
         <div className="w-12 h-12 rounded-full bg-slate-300 dark:bg-slate-700 opacity-50"></div>
       </div>
@@ -156,6 +163,9 @@ const Joystick: React.FC<JoystickProps> = ({ onChange }) => {
       >
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-12 h-12 rounded-full bg-primary-foreground/20"></div>
+          <div className="absolute text-[10px] font-mono text-primary-foreground/70">
+            {normalizedPosition.x},{normalizedPosition.y}
+          </div>
         </div>
       </div>
     </div>
