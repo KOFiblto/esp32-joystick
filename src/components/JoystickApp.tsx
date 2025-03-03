@@ -14,7 +14,7 @@ const JoystickApp: React.FC = () => {
     setY(newY);
     
     // Update history (keep last 100 values)
-    const newHistory = [...historyRef.current, [newX, newY]];
+    const newHistory = [...historyRef.current, [newX, newY] as [number, number]];
     if (newHistory.length > 100) {
       newHistory.shift();
     }
