@@ -1,5 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
+interface JoystickPosition {
+  x: number;
+  y: number;
+  created_at: string;
+}
+
 // Function to fetch, update, and overwrite the database with exactly 100 joystick positions
 export async function saveJoystickPositions(history: { x: number; y: number }[]): Promise<void> {
   try {
@@ -18,8 +24,14 @@ export async function saveJoystickPositions(history: { x: number; y: number }[])
     
     console.log(`Fetched ${existingData?.length || 0} existing positions.`);
     
+    // Convert history to match expected structure
+    const historyWithTimestamps: JoystickPosition[] = history.map(pos => ({
+      ...pos,
+      created_at: new Date().toISOString()
+    }));
+
     // Merge existing data with new history
-    let updatedPositions = [...existingData, ...history].slice(-100);
+    let updatedPositions: JoystickPosition[] = [...existingData, ...historyWithTimestamps].slice(-100);
     while (updatedPositions.length < 100) {
       updatedPositions.unshift({ x: 0, y: 0, created_at: new Date().toISOString() }); // Add dummy entries if needed
     }
@@ -27,7 +39,7 @@ export async function saveJoystickPositions(history: { x: number; y: number }[])
     // Overwrite the database with updated positions
     const { data, error: upsertError } = await supabase
       .from('joystick_positions')
-      .upsert(updatedPositions, { onConflict: ['id'] });
+      .upsert(updatedPositions, { onConflict: ['created_at'] });
     
     if (upsertError) {
       console.error('Error upserting positions:', upsertError);
@@ -42,7 +54,7 @@ export async function saveJoystickPositions(history: { x: number; y: number }[])
 }
 
 // Function to fetch joystick position history
-export async function getJoystickPositions(): Promise<{ x: number; y: number; created_at: string }[]> {
+export async function getJoystickPositions(): Promise<JoystickPosition[]> {
   try {
     console.log("Fetching joystick positions...");
     
