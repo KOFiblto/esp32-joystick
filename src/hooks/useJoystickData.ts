@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { saveJoystickPosition, getJoystickPositions } from "../utils/supabaseUtils";
+import { saveJoystickPositions, getJoystickPositions } from "../utils/supabaseUtils";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -107,7 +107,8 @@ export function useJoystickData() {
       const now = Date.now();
       if (now - lastUploadTimeRef.current >= 50) {
         lastUploadTimeRef.current = now;
-        saveJoystickPosition(x, y)
+        // Fix the function call to match the exported function name
+        saveJoystickPositions([{ x, y }])
           .then(() => {
             if (!isConnected) {
               setIsConnected(true);
