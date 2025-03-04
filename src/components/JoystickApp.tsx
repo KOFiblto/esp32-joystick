@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import Joystick from "./Joystick";
 import { motion } from "framer-motion";
@@ -12,6 +11,7 @@ const JoystickApp: React.FC = () => {
   const [history, setHistory] = useState<[number, number][]>([]);
   const historyRef = useRef<[number, number][]>([]);
   const lastUploadTimeRef = useRef<number>(0);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Fetch initial history from Supabase
   useEffect(() => {
@@ -21,31 +21,28 @@ const JoystickApp: React.FC = () => {
         const formattedHistory = positions.map(pos => [pos.x, pos.y] as [number, number]);
         historyRef.current = formattedHistory;
         setHistory(formattedHistory);
+        setIsConnected(true);
         toast({
           title: "Connected to Supabase",
           description: `Loaded ${formattedHistory.length} positions from database`,
         });
       } catch (error) {
         console.error("Error fetching initial history:", error);
+        toast({
+          title: "Connection Error",
+          description: "Could not connect to database",
+          variant: "destructive",
+        });
       }
     };
 
     fetchInitialHistory();
   }, []);
 
-  // Subscribe to realtime changes
+  // Subscribe to realtime changes - without using the RPC function that's causing issues
   useEffect(() => {
-    // Enable realtime for this table
-    const enableRealtimeQuery = async () => {
-      try {
-        // Using any here to fix the TypeScript error related to unknown RPC function
-        await supabase.rpc('install_available_extensions_and_test' as any);
-      } catch (error) {
-        console.error("Error enabling realtime:", error);
-      }
-    };
-    
-    enableRealtimeQuery();
+    // Enable realtime for this table - we'll skip the problematic RPC call
+    console.log("Setting up realtime subscription...");
     
     // Subscribe to realtime changes
     const channel = supabase
@@ -58,6 +55,7 @@ const JoystickApp: React.FC = () => {
           table: 'joystick_positions',
         },
         (payload) => {
+          console.log("Received realtime update:", payload);
           if (payload.new) {
             const newPos = payload.new as { x: number, y: number };
             const newHistory = [...historyRef.current, [newPos.x, newPos.y] as [number, number]];
@@ -69,9 +67,15 @@ const JoystickApp: React.FC = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+        if (status === 'SUBSCRIBED') {
+          console.log("Successfully subscribed to realtime updates");
+        }
+      });
 
     return () => {
+      console.log("Cleaning up channel subscription");
       supabase.removeChannel(channel);
     };
   }, []);
@@ -106,12 +110,20 @@ const JoystickApp: React.FC = () => {
       const now = Date.now();
       if (now - lastUploadTimeRef.current >= 50) {
         lastUploadTimeRef.current = now;
-        saveJoystickPosition(x, y);
+        saveJoystickPosition(x, y)
+          .then(() => {
+            if (!isConnected) {
+              setIsConnected(true);
+            }
+          })
+          .catch((error) => {
+            console.error("Error saving position:", error);
+          });
       }
     }, 50);
 
     return () => clearInterval(uploadInterval);
-  }, [x, y]);
+  }, [x, y, isConnected]);
 
   // Functions to format coordinates for display
   const formatCoord = (value: number) => {
@@ -134,7 +146,11 @@ const JoystickApp: React.FC = () => {
           Move the knob to adjust coordinates (-1000 to 1000)
         </p>
         <p className="text-muted-foreground text-xs mt-1">
-          Data is saved to Supabase every 50ms with realtime sync
+          {isConnected ? (
+            "Connected to Supabase with realtime sync"
+          ) : (
+            "Attempting to connect to database..."
+          )}
         </p>
       </motion.div>
 
