@@ -1,8 +1,10 @@
+
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import Joystick from "./Joystick";
 import { motion } from "framer-motion";
 import { saveJoystickPosition, getJoystickPositions } from "../utils/supabaseUtils";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const JoystickApp: React.FC = () => {
   const [x, setX] = useState(0);
@@ -29,6 +31,44 @@ const JoystickApp: React.FC = () => {
     };
 
     fetchInitialHistory();
+  }, []);
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    // Enable realtime for this table
+    const enableRealtimeQuery = async () => {
+      await supabase.rpc('install_available_extensions_and_test');
+    };
+    
+    enableRealtimeQuery();
+    
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'joystick_positions',
+        },
+        (payload) => {
+          if (payload.new) {
+            const newPos = payload.new as { x: number, y: number };
+            const newHistory = [...historyRef.current, [newPos.x, newPos.y] as [number, number]];
+            if (newHistory.length > 100) {
+              newHistory.shift();
+            }
+            historyRef.current = newHistory;
+            setHistory(newHistory);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Update joystick values
@@ -89,7 +129,7 @@ const JoystickApp: React.FC = () => {
           Move the knob to adjust coordinates (-1000 to 1000)
         </p>
         <p className="text-muted-foreground text-xs mt-1">
-          Data is saved to Supabase every 50ms
+          Data is saved to Supabase every 50ms with realtime sync
         </p>
       </motion.div>
 
