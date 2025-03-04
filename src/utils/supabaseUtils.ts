@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Function to add joystick position to Supabase
@@ -5,7 +6,49 @@ export async function saveJoystickPosition(x: number, y: number): Promise<void> 
   try {
     console.log(`Saving position: x=${x}, y=${y}`);
     
-    // Insert the new position
+    // Get the total count of records
+    const { count, error: countError } = await supabase
+      .from('joystick_positions')
+      .select('*', { count: 'exact', head: true });
+    
+    if (countError) {
+      console.error('Error counting positions:', countError);
+      throw countError;
+    }
+
+    // If we have 100 or more records, update the oldest one
+    if (count && count >= 100) {
+      // Get the oldest record
+      const { data: oldestData, error: oldestError } = await supabase
+        .from('joystick_positions')
+        .select('id')
+        .order('created_at', { ascending: true })
+        .limit(1);
+        
+      if (oldestError) {
+        console.error('Error finding oldest position:', oldestError);
+        throw oldestError;
+      }
+      
+      if (oldestData && oldestData.length > 0) {
+        // Update the oldest record with new values
+        const { data: updateData, error: updateError } = await supabase
+          .from('joystick_positions')
+          .update({ x, y, created_at: new Date().toISOString() })
+          .eq('id', oldestData[0].id)
+          .select();
+          
+        if (updateError) {
+          console.error('Error updating position:', updateError);
+          throw updateError;
+        }
+        
+        console.log('Position updated successfully:', updateData);
+        return;
+      }
+    }
+    
+    // If we have fewer than 100 records or couldn't find the oldest one, insert a new record
     const { data, error } = await supabase
       .from('joystick_positions')
       .insert({ x, y })
@@ -17,10 +60,6 @@ export async function saveJoystickPosition(x: number, y: number): Promise<void> 
     }
     
     console.log('Position saved successfully:', data);
-
-    // Keep only the latest 100 records
-    await cleanupOldPositions();
-    
     return;
   } catch (err) {
     console.error('Error in saveJoystickPosition:', err);
@@ -49,46 +88,5 @@ export async function getJoystickPositions(): Promise<{ x: number; y: number; cr
   } catch (err) {
     console.error('Error in getJoystickPositions:', err);
     throw err;
-  }
-}
-
-// Private function to delete old records, keeping only the latest 100
-async function cleanupOldPositions(): Promise<void> {
-  try {
-    // Get IDs of records to keep (newest 100)
-    const { data: keepData, error: selectError } = await supabase
-      .from('joystick_positions')
-      .select('id')
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (selectError) {
-      console.error('Error selecting records to keep:', selectError);
-      return;
-    }
-
-    if (!keepData || keepData.length < 100) {
-      console.log('Not enough records to clean up yet.');
-      return;
-    }
-
-    // Delete all records except the ones we want to keep
-    const keepIds = keepData.map(item => item.id);
-    const oldestIdToKeep = Math.min(...keepIds);
-
-    console.log(`Cleaning up records with ID < ${oldestIdToKeep}`);
-    
-    const { error: deleteError } = await supabase
-      .from('joystick_positions')
-      .delete()
-      .lt('id', oldestIdToKeep);
-
-    if (deleteError) {
-      console.error('Error cleaning up old positions:', deleteError);
-    } else {
-      console.log('Successfully cleaned up old records');
-    }
-  } catch (err) {
-    console.error('Error in cleanupOldPositions:', err);
   }
 }

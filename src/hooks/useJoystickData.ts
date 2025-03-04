@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from "react";
 import { saveJoystickPosition, getJoystickPositions } from "../utils/supabaseUtils";
 import { toast } from "@/components/ui/use-toast";
@@ -46,7 +47,7 @@ export function useJoystickData() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'joystick_positions',
         },
@@ -54,12 +55,12 @@ export function useJoystickData() {
           console.log("Received realtime update:", payload);
           if (payload.new) {
             const newPos = payload.new as { x: number, y: number };
-            const newHistory = [...historyRef.current, [newPos.x, newPos.y] as [number, number]];
-            if (newHistory.length > 100) {
-              newHistory.shift();
-            }
-            historyRef.current = newHistory;
-            setHistory(newHistory);
+            // For updated records, we need to refresh the entire list
+            getJoystickPositions().then(positions => {
+              const formattedHistory = positions.map(pos => [pos.x, pos.y] as [number, number]);
+              historyRef.current = formattedHistory;
+              setHistory(formattedHistory);
+            });
           }
         }
       )
