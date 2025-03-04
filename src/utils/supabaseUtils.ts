@@ -63,4 +63,4 @@ export async function getJoystickPositions(): Promise<{ x: number; y: number; cr
     console.error('Error in getJoystickPositions:', err);
     throw err;
   }
-}
+}//Test
