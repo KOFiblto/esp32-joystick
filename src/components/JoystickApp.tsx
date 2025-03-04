@@ -37,7 +37,12 @@ const JoystickApp: React.FC = () => {
   useEffect(() => {
     // Enable realtime for this table
     const enableRealtimeQuery = async () => {
-      await supabase.rpc('install_available_extensions_and_test');
+      try {
+        // Using any here to fix the TypeScript error related to unknown RPC function
+        await supabase.rpc('install_available_extensions_and_test' as any);
+      } catch (error) {
+        console.error("Error enabling realtime:", error);
+      }
     };
     
     enableRealtimeQuery();
