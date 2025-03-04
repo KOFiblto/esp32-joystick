@@ -1,68 +1,42 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
-// Function to add joystick position to Supabase
-export async function saveJoystickPosition(x: number, y: number): Promise<void> {
+// Function to fetch, update, and overwrite the database with exactly 100 joystick positions
+export async function saveJoystickPositions(history: { x: number; y: number }[]): Promise<void> {
   try {
-    console.log(`Saving position: x=${x}, y=${y}`);
+    console.log("Fetching existing positions from database...");
     
-    // Get the total count of records
-    const { count, error: countError } = await supabase
+    // Fetch current database entries
+    const { data: existingData, error: fetchError } = await supabase
       .from('joystick_positions')
-      .select('*', { count: 'exact', head: true });
+      .select('x, y, created_at')
+      .order('created_at', { ascending: false });
     
-    if (countError) {
-      console.error('Error counting positions:', countError);
-      throw countError;
-    }
-
-    // If we have 100 or more records, update the oldest one
-    if (count && count >= 100) {
-      // Get the oldest record
-      const { data: oldestData, error: oldestError } = await supabase
-        .from('joystick_positions')
-        .select('id')
-        .order('created_at', { ascending: true })
-        .limit(1);
-        
-      if (oldestError) {
-        console.error('Error finding oldest position:', oldestError);
-        throw oldestError;
-      }
-      
-      if (oldestData && oldestData.length > 0) {
-        // Update the oldest record with new values
-        const { data: updateData, error: updateError } = await supabase
-          .from('joystick_positions')
-          .update({ x, y, created_at: new Date().toISOString() })
-          .eq('id', oldestData[0].id)
-          .select();
-          
-        if (updateError) {
-          console.error('Error updating position:', updateError);
-          throw updateError;
-        }
-        
-        console.log('Position updated successfully:', updateData);
-        return;
-      }
+    if (fetchError) {
+      console.error('Error fetching existing positions:', fetchError);
+      throw fetchError;
     }
     
-    // If we have fewer than 100 records or couldn't find the oldest one, insert a new record
-    const { data, error } = await supabase
+    console.log(`Fetched ${existingData?.length || 0} existing positions.`);
+    
+    // Merge existing data with new history
+    let updatedPositions = [...existingData, ...history].slice(-100);
+    while (updatedPositions.length < 100) {
+      updatedPositions.unshift({ x: 0, y: 0, created_at: new Date().toISOString() }); // Add dummy entries if needed
+    }
+    
+    // Overwrite the database with updated positions
+    const { data, error: upsertError } = await supabase
       .from('joystick_positions')
-      .insert({ x, y })
-      .select();
-
-    if (error) {
-      console.error('Error saving position to Supabase:', error);
-      throw error;
+      .upsert(updatedPositions, { onConflict: ['id'] });
+    
+    if (upsertError) {
+      console.error('Error upserting positions:', upsertError);
+      throw upsertError;
     }
     
-    console.log('Position saved successfully:', data);
-    return;
+    console.log("Positions saved successfully:", data);
   } catch (err) {
-    console.error('Error in saveJoystickPosition:', err);
+    console.error("Error in saveJoystickPositions:", err);
     throw err;
   }
 }
@@ -70,7 +44,7 @@ export async function saveJoystickPosition(x: number, y: number): Promise<void> 
 // Function to fetch joystick position history
 export async function getJoystickPositions(): Promise<{ x: number; y: number; created_at: string }[]> {
   try {
-    console.log('Fetching joystick positions...');
+    console.log("Fetching joystick positions...");
     
     const { data, error } = await supabase
       .from('joystick_positions')
